@@ -11,13 +11,15 @@ class Holvi
 
   def initialize(username, pass1)
     @agent = Mechanize.new
-    @agent.get('https://holvi.com/login/')
+    @agent.get('https://app.holvi.com/login/')
 
     loginForm = @agent.page.form_with(:action => '/login/')
     loginForm.field_with(:name => 'username').value = username
     loginForm.field_with(:name => 'pass1').value = pass1
     loginForm.submit
 
+    cookies = @agent.cookies.select{ |c| c.name == 'holvi_jwt_auth' }
+    @accessToken = cookies.first.value
     @summarylist = api('summarylist/')
   end
 
@@ -91,8 +93,12 @@ class Holvi
     end
   end
 
+  def headers
+    { 'Authorization' => "Bearer #{@accessToken}", 'Content-Type' => 'application/json'}
+  end
+
   def get(url)
-    JSON.parse @agent.get(url).body, symbolize_names: true
+    JSON.parse @agent.get(url, [], nil, headers).body, symbolize_names: true
   end
 
   def api(url)
